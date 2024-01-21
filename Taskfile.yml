@@ -1,0 +1,82 @@
+# Taskfile.yml
+# Copyright (c) 2024 Neomantra BV
+
+version: '3'
+
+tasks:
+  default:
+    cmds:
+      - task: build
+
+  clean:
+    cmds:
+      - rm -f ./bin/nomad-onload-device ./bin/onload-probe ./bin/launcher
+
+  tidy:
+    cmds:
+      - go mod tidy
+
+  install-deps:
+    deps:
+      - tidy
+    cmds:
+      - go build -o ./bin/launcher github.com/hashicorp/nomad/plugins/shared/cmd/launcher
+    generates:
+      - ./bin/launcher
+
+  build:
+    deps:
+      - build-plugin
+      - build-onload-probe
+
+  eval:
+    deps:
+      - build-plugin
+    cmds:
+      - ./bin/launcher device ./bin/nomad-onload-device ./examples/onload-ubuntu.hcl
+
+  build-plugin:
+    deps:
+      - install-deps
+      - tidy
+    cmds:
+      - go build -o ./bin/nomad-onload-device cmd/nomad-device-onload/*.go
+    generates:
+      - ./bin/nomad-onload-device
+    sources:
+      - cmd/nomad-device-onload/*.go
+      - internal/**/*.go
+    silent: false
+
+  # for testing
+  dev-install-plugin:
+    deps:
+      - build-plugin
+    cmds:
+      - |
+        PLUGIN_DIR=${PLUGIN_DIR:-/local/nomad/plugins}
+        sudo mkdir -p ${PLUGIN_DIR}
+        sudo cp ./bin/nomad-onload-device ${PLUGIN_DIR}/
+
+  dev-install-plugin-restart-nomad:
+    deps:
+      - build-plugin
+    cmds:
+      - |
+        PLUGIN_DIR=${PLUGIN_DIR:-/local/nomad/plugins}
+        sudo systemctl stop nomad
+        sudo mkdir -p ${PLUGIN_DIR}
+        sudo cp ./bin/nomad-onload-device ${PLUGIN_DIR}/
+        sudo systemctl start nomad
+
+  build-onload-probe:
+    deps:
+      - tidy
+    cmds:
+      - go build -o ./bin/onload-probe cmd/onload-probe/*.go
+    generates:
+      - ./bin/onload-probe
+    sources:
+      - cmd/onload-probe/*.go
+      - internal/**/*.go
+    silent: false
