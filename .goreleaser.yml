@@ -41,4 +41,4 @@ universal_binaries:
 release:
   github:
     owner: neomantra
-    name: nomad-device-onload
+    name: nomad-onload
