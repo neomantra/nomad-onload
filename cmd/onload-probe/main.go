@@ -46,7 +46,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Failed to query interfaces: %s\n", err.Error())
 	} else {
 		for _, nic := range nics {
-			fmt.Fprintf(os.Stdout, "%s\n", nic)
+			fmt.Fprintf(os.Stdout, "  %-8s %s\n", nic.Interface, nic.PCIBusID)
 		}
 	}
 }

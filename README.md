@@ -168,10 +168,8 @@ Here we are with this same capability for [HashiCorp Nomad](https://www.nomadpro
 
 ## Roadmap
 
- * [ ] `PCIBusID`
- * [ ] `HealthDesc`
- * [ ] Device Statistics
  * [ ] Device Attributes
+ * [ ] Device Statistics
  * [ ] Redis example
  * [ ] XDP example
 

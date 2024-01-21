@@ -57,16 +57,16 @@ func (d *OnloadDevicePlugin) getFingerprintData() (*FingerprintData, error) {
 		d.logger.Info("TCPDirect not found", "err", err.Error())
 	}
 
-	interfaces, err := ProbeOnloadNics()
+	nics, err := ProbeOnloadNics()
 	if err != nil {
 		d.logger.Info("Issue probing Onload NICs", "err", err.Error())
 	}
-	if len(interfaces) == 0 {
+	if len(nics) == 0 {
 		// if we did not discover any SFC NIC,s that's OK.
 		// Onload can be used without it, so we publish
 		// a fake device called "none" to still allow Onload enablement
 		// via the "<device_type>" name configuration
-		interfaces = append(interfaces, deviceName_none)
+		nics = append(nics, NICInfo{deviceName_none, ""})
 	}
 
 	// list of eligble device types
@@ -79,14 +79,14 @@ func (d *OnloadDevicePlugin) getFingerprintData() (*FingerprintData, error) {
 	}
 
 	// create the fingerprint device list
-	devices := make([]*FingerprintDeviceData, 0, len(deviceTypes)*len(interfaces))
-	for _, iface := range interfaces {
+	devices := make([]*FingerprintDeviceData, 0, len(deviceTypes)*len(nics))
+	for _, nic := range nics {
 		for _, deviceType := range deviceTypes {
 			devices = append(devices, &FingerprintDeviceData{
-				Interface:  iface,
+				Interface:  nic.Interface,
 				DeviceType: deviceType,
 				Vendor:     vendor_SFC,
-				PCIBusID:   "", // TODO: extract format for NUMA awareness
+				PCIBusID:   nic.PCIBusID,
 			})
 		}
 	}

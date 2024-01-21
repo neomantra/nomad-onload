@@ -4,6 +4,7 @@
 package onload_device
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
@@ -70,57 +71,52 @@ func ProbeZFVersion(binPath string) (string, error) {
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: (c) Copyright 2023 Advanced Micro Devices, Inc.
 
+type NICInfo struct {
+	Interface string
+	PCIBusID  string
+}
+
 // Returns a list of the Solarflare interfaces present on the node
-func ProbeOnloadNics() ([]string, error) {
-	// Depending on what information we are looking for in the output I think it
-	// is quite tempting to retrieve the information in a json format, then
-	// parse this using golang's built-in features.
-	bytes, err := exec.Command("lshw", "-short", "-class", "network").CombinedOutput()
-	output := string(bytes)
+func ProbeOnloadNics() ([]NICInfo, error) {
+	// Takes the output from lshw and returns the device name for each Solarflare device.
+
+	// "lshw -businfo -class network" sample output:
+	// Bus info          Device     Class          Description
+	// =======================================================
+	// pci@0000:04:00.0  eth2       network        NetXtreme BCM5720 Gigabit Ethernet PCIe
+	// pci@0000:04:00.1  eth3       network        NetXtreme BCM5720 Gigabit Ethernet PCIe
+	// pci@0000:31:00.0             network        BCM57412 NetXtreme-E 10Gb RDMA Ethernet Controller
+	// pci@0000:31:00.1             network        BCM57412 NetXtreme-E 10Gb RDMA Ethernet Controller
+	// pci@0000:98:00.0  eth4       network        BCM57412 NetXtreme-E 10Gb RDMA Ethernet Controller
+	// pci@0000:98:00.1  eth5       network        BCM57412 NetXtreme-E 10Gb RDMA Ethernet Controller
+	// pci@0000:b1:00.0  eth0       network        SFC9220 10/40G Ethernet Controller
+	// pci@0000:b1:00.1  eth1       network        SFC9220 10/40G Ethernet Controller
+
+	// This regex makes the assumption that all interface names only
+	// contain either lowercase letters or numbers. If that is not true,
+	// then this should be updated to reflect that.
+	// First match group is the PCI bus, second match group is the Interface
+	r := regexp.MustCompile("^pci@([a-f0-9:.]+) *([a-z0-9]+) *network *.*SFC")
+
+	cmdOutput, err := exec.Command("lshw", "-businfo", "-class", "network").CombinedOutput()
 	if err != nil {
 		return nil, err
 	}
-	interfaces := parseOutput(output)
-	return interfaces, nil
-}
 
-// Takes the output from lshw and returns the device name for each Solarflare device.
-func parseOutput(output string) []string {
-	// "lshw -short -class network" sample output:
-	// H/W path            Device     Class          Description
-	// =========================================================
-	// /0/100/1b/0         enp2s0f0   network        XtremeScale SFC9250 10/25/40/50/100G Ethernet Controller
-	// /0/100/1b/0.1       enp2s0f1   network        XtremeScale SFC9250 10/25/40/50/100G Ethernet Controller
-	// /0/100/1c.1/0       eno1       network        NetXtreme BCM5720 Gigabit Ethernet PCIe
-	// /0/100/1c.1/0.1     eno2       network        NetXtreme BCM5720 Gigabit Ethernet PCIe
+	var nics []NICInfo
+	scanner := bufio.NewScanner(strings.NewReader(string(cmdOutput)))
 
-	lines := strings.Split(output, "\n")
-	var interfaces []string
-
-	// Assume that we are running as root, if not then we would have to skip
-	// an additional line at the start of the output
-	skip_lines := 2
-	end_lines := 1
-	if os.Geteuid() != 0 {
-		skip_lines = 3
-		end_lines = 2
-	}
-
-	for _, line := range lines[skip_lines : len(lines)-end_lines] {
-		// This regex makes the assumption that all interface names only
-		// contain either lowercase letters or numbers. If that is not true,
-		// then this should be updated to reflect that.
-		r := regexp.MustCompile("([a-z0-9]+) *network *.*SFC")
-		out := r.FindStringSubmatch(line)
-		if out != nil {
-			// It is safe to access out[1] here since the return value of
-			// FindStringSubmatch is an array where the first value is the
-			// whole string and any subsequent values are the submatches.
-			// In this case since there is a submatch that should match the
-			// device name if FindStringSubmatch returns non-nil then there
-			// will be at least 2 elements in the return array.
-			interfaces = append(interfaces, out[1])
+	for scanner.Scan() {
+		line := scanner.Text()
+		m := r.FindStringSubmatch(line)
+		if len(m) == 3 {
+			iface, busid := m[2], m[1]
+			nics = append(nics, NICInfo{iface, busid})
 		}
 	}
-	return interfaces
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return nics, nil
 }
