@@ -2,39 +2,26 @@
 
 `nomad-onload` is tooling to integrate [Nomad](https://www.nomadproject.io) and [OpenOnload](https://github.com/Xilinx-CNS/onload).
 
-It provides a [Nomad Device Plugin](https://developer.hashicorp.com/nomad/docs/concepts/plugins/devices) that exposes OpenOnload capabilites to Nomad via virtual devices.  This enables kernel-bypass of the networking stack of any Docker-driver Nomad Job.  In addition to TCP and UDP acceleration, facilities like  `epoll` and pipes are brought to userspace as well.
+It provides a [Nomad Device Plugin](https://developer.hashicorp.com/nomad/docs/concepts/plugins/devices) that exposes OpenOnload capabilites to Nomad via virtual devices.  This enables kernel-bypass of the networking stack of any Docker-driver Nomad Job.  In addition to TCP and UDP acceleration, facilities like `epoll` and pipes are brought to userspace as well.
 
-When [installed](./installation), this plugin will discover an Onload installation and make [plugin-based devices](https://developer.hashicorp.com/nomad/docs/concepts/plugins/devices) available to Nomad Clients.  The plugin publishes the following "device types"; which are available depend on whether the host OS has installed Onload and [TCPDirect]().
+After [installing the plugin](#installation) and adding `device "onload" {}` to a Nomad Tasks' `resources` stanza, that container will become Onload-accelerated!  With proper tuning, you can get extreme performance :sunglasses:.
 
-| Device Type | Onload? | TCPDirect? | Notes |
-|:-----|:-------:|:----------:|:------|
-| | N | N | Nothing mounted. No devices published, even with SFC hardware |
-| `onload` | Y | N | Onload mounted, `LD_PRELOAD` per `set_preload` config |
-| `zf` | N | Y | Only TCPDirect mounted, `LD_PRELOAD` skipped |
-| `onloadzf` | Y | Y |  Like `onload`, but TCPDirect is also mounted. |
+Running high-performance kernel-bypass workloads is a vast topic. This [High Performance Redis](https://gist.github.com/neomantra/3c9b89887d19be6fa5708bf4017c0ecd) gist includes an introduction to it with Onload and kernel tuning.
 
-When a one of those device types, such as `onload` is specified in a Nomad Job's [resource stanza](https://developer.hashicorp.com/nomad/docs/job-specification/resources#device),
-then the plugin will install Onload binaries and libraries and device files into the Task,
-and optionally `LD_PRELOAD` Onload.   Onload performance tuning may be applied via its environment variables:
+ * [Installation](#installation)
+ * [Onload Devices](#onload-devices)
+ * [Plugin Configuration](#plugin-configuration)
+ * [Tips](#tips)
+ * [Building](#building)
+ * [Motivation](#motivation)
+ * [Roadmap](#roadmap)
+ * [Credits and License](#credits-and-license)
 
-```hcl
-task {
-  env {
-    EF_TCP_SERVER_LOOPBACK = "2"
-    EF_TCP_CLIENT_LOOPBACK = "4"
-  } 
-  resources {
-    device "onload" {}
-  }
-}
-```
-
-You may also be interested in Neomantra's [`docker-onload` tooling](https://github.com/neomantra/docker-onload) for [Onload-enabled Docker images](https://hub.docker.com/r/neomantra/onload).  Running high-performance kernel-bypass workloads is a vast topic; this  [High Performance Redis](https://gist.github.com/neomantra/3c9b89887d19be6fa5708bf4017c0ecd) gist includes an introduction.
-
+----
 
 ## Installation
 
-Binaries for multiple platforms are [released on GitHub](https://github.com/neomantra/nomad-onload/releases) through [GitHub Actions](https://github.com/neomantra/nomad-onload/actions).
+Binaries for multiple platforms are [released on GitHub](https://github.com/neomantra/nomad-onload/releases).
 
 To install the Nomad Onload Device Plugin on your Nomad Client instance,
 copy the `nomad-onload-device` binary to the host's [Nomad `plugin_dir`](https://developer.hashicorp.com/nomad/docs/configuration#plugin_dir) (e.g. `/opt/nomad/data/plugins`).
@@ -51,32 +38,89 @@ plugin "nomad-onload-device" {
 }
 ```
 
+## Onload Devices
 
-## Plugin Configuration
+When [installed](#installation), this plugin will discover an Onload installation and make [plugin-based devices](https://developer.hashicorp.com/nomad/docs/concepts/plugins/devices) available to Nomad Clients.  The plugin publishes the following "device types"; which are available depend on whether the host OS has installed Onload and [TCPDirect]().
 
-The following settings are available to configure the plugin behavior, per above:
+| Device Type | Onload? | TCPDirect? | Notes |
+|:-----|:-------:|:----------:|:------|
+| | N | N | Nothing mounted. No devices published, even with SFC hardware |
+| `onload` | Y | N | Onload mounted, `LD_PRELOAD` per `set_preload` config |
+| `zf` | N | Y | Only TCPDirect mounted, `LD_PRELOAD` skipped |
+| `onloadzf` | Y | Y |  Like `onload`, but TCPDirect is also mounted. |
 
-| Name | Type | Default | Description |
-|:-----|:----:|:-------:|:------------|
-| `need_nic` | `bool` | `true` | Should the Device Plugin fail if no compatible nics are found |
-| `set_preload` | `bool` | `true` | Should the device plugin set the LD_PRELOAD environment variable in the Task |
-| `mount_onload` | `bool` | `false` | Should the device plugin mount Onload files into the Nomad Task |
-| `ignored_interfaces` | `list(string)` | `[]` | List of interfaces to ignore.  Include `none` to prevent that pseudo-devices creation |
-| `task_device_path` | `string` | `"/dev"` | Path to place device files in the Nomad Task |
-| `host_device_path` | `string` | `"/dev"` | Path to find device files on the Host |
-| `task_onload_lib_path` | `string` | `"/opt/onload/usr/lib64/"` | Path to place Onload libraries in the Nomad Task |
-| `host_onload_lib_path` | `string` | `"/usr/lib64"` | Path to find Onload libraries on the Host |
-| `task_onload_bin_path` | `string` | `"/opt/onload/usr/bin/"` | Path to place Onload binaries in the Nomad Task |
-| `host_onload_bin_path` | `string` | `"/usr/bin"` | Path to find Onload binaries on the Host |
-| `task_zf_bin_path` | `string` | `"/opt/onload/usr/bin/"` | Path to place TCPDirect/ZF binaries in the Nomad Task |
-| `host_zf_bin_path` | `string` | `"/usr/bin"` | Path to find TCPDirect/ZF binaries on the Host |
-| `task_zf_lib_path` | `string` | `"/opt/onload/usr/bin/"` | Path to place TCPDirect/ZF libraries in the Nomad Task |
-| `host_zf_lib_path` | `string` | `"/usr/lib64"` | Path to find TCPDirect/ZF libraries on the Host |
-| `fingerprint_period` | `string` | `"1m"` | Period of time between attemps to fingerpint devices |
+When a one of those device types, such as `onload` is specified in a Nomad Job's [resource stanza](https://developer.hashicorp.com/nomad/docs/job-specification/resources#device),
+then the plugin will install Onload binaries and libraries and device files into the Task,
+and optionally `LD_PRELOAD` Onload.   Onload performance tuning may be applied via its various `EF_` environment variable knobs.
+
+
+```hcl
+task {
+  env {
+    EF_TCP_SERVER_LOOPBACK = "2"
+    EF_TCP_CLIENT_LOOPBACK = "4"
+  } 
+  resources {
+    device "onload" {}
+  }
+}
+```
 
 ----
 
-# `onload_stackdump`
+Here are how Onload devices are made fingerprinted:
+
+ * If Onload/TCPDirect is not installed, there are no devices available.
+ * Each "SFC interface" (Solarflare/Xilinx/AMD Network Card) is discovered with Vendor `amd`
+ * If there are no SFC interfaces found, we create a fake one called `none`
+
+So if we have both Onload and TCPDirect installed along with two SFC interfces `eth0` and `eth1`, we'd have the following devices available to a Nomad Client:
+  * `amd/eth0/onload` `amd/eth0/zf` `amd/eth0/onloadzf`
+  * `amd/eth1/onload` `amd/eth1/zf` `amd/eth1/onloadzf`
+
+Or similarly, with Onload and TCPDirect installed, but without SFC interfaces:
+ * `amd/none/onload` `amd/none/zf` `amd/none/onloadzf`
+
+
+Nomad allows devices to be selected per this [device name](https://developer.hashicorp.com/nomad/docs/job-specification/device#name):
+
+ * `<device_type>`
+ * `<vendor>/<device_type>`
+ * `<vendor>/<device_type>/<model>`
+
+Thus, by simply specifying the Device Type name `onload`, we get the Onload capability.  However, the full information can be used in `name`, as well as the attributes used in `contraint` and `affinity`.
+
+
+## Plugin Configuration
+
+The following settings are available to configure the plugin behavior, per above.
+
+Devices and libraries are always installed when a `nomad-onload` device is used in the `resources` stanza.  Setting any partiular path to empty string `""` will disable that mount.  For example, `host_profile_dir_path = ""` will prevent mount profiles.
+
+If `mount_onload` is enables mounting of all the files and paths configured below it,
+  All mounts are read-only.
+
+| Name | Type | Default | Description |
+|:-----|:----:|:-------:|:------------|
+| `need_nic` | `bool` | `true` | Should the Device Plugin fail if no compatible nics are found. *NOT IMPLEMENTED* |
+| `set_preload` | `bool` | `true` | Should the device plugin set the LD_PRELOAD environment variable in the Task |
+| `mount_onload` | `bool` | `true` | Should the device plugin mount Onload files into the Nomad Task |
+| `ignored_interfaces` | `list(string)` | `[]` | List of interfaces to ignore.  Include `none` to prevent that pseudo-devices creation |
+| `task_device_path` | `string` | `"/dev"` | Path to place device files in the Nomad Task |
+| `host_device_path` | `string` | `"/dev"` | Path to find device files on the Host |
+| `task_onload_lib_path` | `string` | `"/opt/onload/usr/lib64"` | Path to place Onload libraries in the Nomad Task |
+| `host_onload_lib_path` | `string` | `"/usr/lib64"` | Path to find Onload libraries on the Host |
+| `task_onload_bin_path` | `string` | `"/opt/onload/usr/bin"` | Path to place Onload binaries in the Nomad Task |
+| `host_onload_bin_path` | `string` | `"/usr/bin"` | Path to find Onload binaries on the Host |
+| `task_profile_dir_path` | `string` | `" /usr/libexec/onload/profiles"` | Path to place Onload profile directory in the Nomad Task |
+| `host_profile_dir_path` | `string` | `" /usr/libexec/onload/profiles"` | Path to find Onload profile directory on the Host |
+| `task_zf_bin_path` | `string` | `"/opt/onload/usr/bin/"` | Path to place TCPDirect/ZF binaries in the Nomad Task |
+| `host_zf_bin_path` | `string` | `"/usr/bin"` | Path to find TCPDirect/ZF binaries on the Host |
+| `task_zf_lib_path` | `string` | `"/opt/onload/usr/bin"` | Path to place TCPDirect/ZF libraries in the Nomad Task |
+| `host_zf_lib_path` | `string` | `"/usr/lib64"` | Path to find TCPDirect/ZF libraries on the Host |
+| `fingerprint_period` | `string` | `"1m"` | Period of time between attemps to fingerpint devices |
+
+## Tips
 
 You can run `onload_stackdump` inside the container, but you must remove `LD_PRELOAD` first:
 
@@ -107,11 +151,27 @@ task: [build-onload-probe] go build -o ./bin/onload-probe cmd/onload-probe/*.go
 task: [build-plugin] go build -o ./bin/nomad-device-plugin-onload cmd/nomad-device-onload/*.go
 ```
 
+We publish with [GitHub Actions](https://github.com/neomantra/nomad-onload/actions) and [Goreleaser](https://goreleaser.com).
+
+## Motivation
+
+When using Onload in containerized environment, all the Onload devices, libraries, and executables need to be present *inside* the container.  Furthermore, the versions of everything need to match *exactly* between Host and Container.
+
+One way to manage this is to build Onload into your image.   Neomantra maintains [`docker-onload` tooling](https://github.com/neomantra/docker-onload) which create [Onload-enabled Docker base images](https://hub.docker.com/r/neomantra/onload).  You can then build your application on top of those base images.  If you maintain multiple Onload versions in your cluster, you would need to apply a CI/CD build matrix of all your Dockerfiles and all your Onload versions.
+
+If you wanted to Onload-enable a third-party application, such as Redis, you would need to either build Redis from an Onload base image, or you would need to add the matching binaries/libraries to a new image derived from a Redis image.
+
+Then, when you actually want to *run* the image, you must hook up `/usr/bin/onload` to activate `LD_PRELOAD`, and you would need to tell Docker to mount devices like `/dev/sfc`.  Clearly this is all cumbersome, but it is necessary.   Typically, teams build scripts and tooling to manage this complexity.
+
+Cluster Orchestrators can help with this as they manage the control plane and prepare Containers for launch.  The Onload team released [Kubernetes Onload](https://github.com/Xilinx-CNS/kubernetes-onload), which provides aKubernetes Operator and resources for automatically injecting the require enviornment into a Kubernetes Pod.
+
+Here we are with this same capability for [HashiCorp Nomad](https://www.nomadproject.io).   Simply ask Nomad for an `onload` device for **any Docker-driver Nomad Job** and the plugin will take care of the rest of the plumbing!
+
 ## Roadmap
 
- * [ ] Mount profiles
  * [ ] `PCIBusID`
  * [ ] `HealthDesc`
+ * [ ] `need_nic`
  * [ ] Device Statistics
  * [ ] Device Attributes
  * [ ] Redis example
@@ -126,6 +186,8 @@ Much of the code has been reviewed and adapted from:
  * [Nvidia Device Plugin](https://github.com/hashicorp/nomad-device-nvidia)
  * [Kubernetes Onload](https://github.com/Xilinx-CNS/kubernetes-onload)
 
-Copyright (c) 2024 [Neomantra BV](https://www.neomantra.com).  Authored by Evan Wies.
+Made with :heart: and :fire: by Evan Wies.
+
+Copyright (c) 2024 [Neomantra BV](https://www.neomantra.com).
 
 Released under the [MIT License](https://en.wikipedia.org/wiki/MIT_License), see [LICENSE.txt](./LICENSE.txt).

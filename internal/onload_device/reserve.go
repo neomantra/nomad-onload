@@ -93,7 +93,8 @@ func (d *OnloadDevicePlugin) Reserve(deviceIDs []string) (*device.ContainerReser
 		return nil, &reservationError{notExistingIDs}
 	}
 
-	// Figure out if we do ZF
+	// Extract deviceType from the first device (all devices the same per Device Group)
+	// This is to check for ZF later.
 	deviceType := d.devices[deviceIDs[0]].DeviceType
 
 	// Initialize the response
@@ -103,19 +104,23 @@ func (d *OnloadDevicePlugin) Reserve(deviceIDs []string) (*device.ContainerReser
 		Devices: []*device.DeviceSpec{},
 	}
 
-	// Mount the Onload Devices
-	for _, deviceFile := range onloadDeviceFiles {
-		resp.Devices = append(resp.Devices, &device.DeviceSpec{
-			TaskPath:    path.Join(d.config.TaskDevicePath, deviceFile),
-			HostPath:    path.Join(d.config.HostDevicePath, deviceFile),
-			CgroupPerms: "mrw",
-		})
+	// Always mount the Devices
+	if d.config.TaskDevicePath != "" && d.config.HostDevicePath != "" {
+		deviceFiles := onloadDeviceFiles
+		if deviceType == deviceType_ZF {
+			deviceFiles = zfDeviceFiles
+		}
+		for _, deviceFile := range deviceFiles {
+			resp.Devices = append(resp.Devices, &device.DeviceSpec{
+				TaskPath:    path.Join(d.config.TaskDevicePath, deviceFile),
+				HostPath:    path.Join(d.config.HostDevicePath, deviceFile),
+				CgroupPerms: "mrw",
+			})
+		}
 	}
 
-	// Copy the Userspace executables and libraries into the container
-	d.logger.Info("Reserve", "mount_onload", d.config.MountOnload)
-	if d.config.MountOnload {
-		// Onload
+	// Always mount the Libraries
+	if d.config.TaskOnloadLibPath != "" && d.config.HostOnloadLibPath != "" {
 		for _, libName := range onloadLibraryFiles {
 			resp.Mounts = append(resp.Mounts, &device.Mount{
 				TaskPath: path.Join(d.config.TaskOnloadLibPath, libName),
@@ -123,22 +128,39 @@ func (d *OnloadDevicePlugin) Reserve(deviceIDs []string) (*device.ContainerReser
 				ReadOnly: true,
 			})
 		}
-		for _, binName := range onloadBinaryFiles {
+	}
+	if (deviceType == deviceType_ZF) || (deviceType == deviceType_OnloadZF) {
+		for _, libName := range zfLibraryFiles {
 			resp.Mounts = append(resp.Mounts, &device.Mount{
-				TaskPath: path.Join(d.config.TaskOnloadBinPath, binName),
-				HostPath: path.Join(d.config.HostOnloadBinPath, binName),
+				TaskPath: path.Join(d.config.TaskOnloadLibPath, libName),
+				HostPath: path.Join(d.config.HostOnloadLibPath, libName),
 				ReadOnly: true,
 			})
 		}
-		// ZF / TCPDirect
-		if (deviceType == deviceType_ZF) || (deviceType == deviceType_OnloadZF) {
-			for _, libName := range zfLibraryFiles {
+	}
+
+	// Copy the Userspace executables and profiles into the container?
+	if d.config.MountOnload {
+		// Onload executables and profiles
+		if d.config.TaskOnloadBinPath != "" && d.config.HostOnloadBinPath != "" {
+			for _, binName := range onloadBinaryFiles {
 				resp.Mounts = append(resp.Mounts, &device.Mount{
-					TaskPath: path.Join(d.config.TaskOnloadLibPath, libName),
-					HostPath: path.Join(d.config.HostOnloadLibPath, libName),
+					TaskPath: path.Join(d.config.TaskOnloadBinPath, binName),
+					HostPath: path.Join(d.config.HostOnloadBinPath, binName),
 					ReadOnly: true,
 				})
 			}
+		}
+		if d.config.TaskProfileDirPath != "" && d.config.HostProfileDirPath != "" {
+			resp.Mounts = append(resp.Mounts, &device.Mount{
+				TaskPath: d.config.TaskProfileDirPath,
+				HostPath: d.config.HostProfileDirPath,
+				ReadOnly: true,
+			})
+		}
+
+		// ZF / TCPDirect executables
+		if (deviceType == deviceType_ZF) || (deviceType == deviceType_OnloadZF) {
 			for _, binName := range zfBinaryFiles {
 				resp.Mounts = append(resp.Mounts, &device.Mount{
 					TaskPath: path.Join(d.config.TaskOnloadBinPath, binName),
@@ -146,19 +168,16 @@ func (d *OnloadDevicePlugin) Reserve(deviceIDs []string) (*device.ContainerReser
 					ReadOnly: true,
 				})
 			}
-
 		}
 	}
 
-	// TODO: Onload Profiles...
-
 	// Setup LD_PRELOAD if desired, but not if we are a "zf" deviceType
-	if d.config.SetPreload && deviceType != deviceType_ZF {
+	if d.config.SetPreload && deviceType != deviceType_ZF && d.config.TaskOnloadLibPath != "" {
 		resp.Envs["LD_PRELOAD"] = path.Join(d.config.TaskOnloadLibPath, onloadPreloadFile)
 	}
 
 	for _, deviceID := range deviceIDs {
-		d.logger.Info("Reserving onload device", "deviceID", deviceID)
+		d.logger.Info("Reserving onload device", "deviceID", deviceID, "mount_onload", d.config.MountOnload)
 	}
 	return resp, nil
 }

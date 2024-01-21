@@ -62,21 +62,23 @@ type configDesc struct {
 
 // Config contains configuration information for the plugin.
 type OnloadDevicePluginConfig struct {
-	NeedNic           bool     `codec:"need_nic"`
-	SetPreload        bool     `codec:"set_preload"`
-	MountOnload       bool     `codec:"mount_onload"`
-	IgnoredInterfaces []string `codec:"ignored_interfaces"`
-	TaskDevicePath    string   `codec:"task_device_path"`
-	HostDevicePath    string   `codec:"host_device_path"`
-	TaskOnloadBinPath string   `codec:"task_onload_bin_path"`
-	HostOnloadBinPath string   `codec:"host_onload_bin_path"`
-	TaskOnloadLibPath string   `codec:"task_onload_lib_path"`
-	HostOnloadLibPath string   `codec:"host_onload_lib_path"`
-	TaskZfBinPath     string   `codec:"task_zf_bin_path"`
-	HostZfBinPath     string   `codec:"host_zf_bin_path"`
-	TaskZfLibPath     string   `codec:"task_zf_lib_path"`
-	HostZfLibPath     string   `codec:"host_zf_lib_path"`
-	FingerprintPeriod string   `codec:"fingerprint_period"`
+	NeedNic            bool     `codec:"need_nic"`
+	SetPreload         bool     `codec:"set_preload"`
+	MountOnload        bool     `codec:"mount_onload"`
+	IgnoredInterfaces  []string `codec:"ignored_interfaces"`
+	TaskDevicePath     string   `codec:"task_device_path"`
+	HostDevicePath     string   `codec:"host_device_path"`
+	TaskOnloadBinPath  string   `codec:"task_onload_bin_path"`
+	HostOnloadBinPath  string   `codec:"host_onload_bin_path"`
+	TaskOnloadLibPath  string   `codec:"task_onload_lib_path"`
+	HostOnloadLibPath  string   `codec:"host_onload_lib_path"`
+	TaskProfileDirPath string   `codec:"task_profile_dir_path"`
+	HostProfileDirPath string   `codec:"host_profile_dir_path"`
+	TaskZfBinPath      string   `codec:"task_zf_bin_path"`
+	HostZfBinPath      string   `codec:"host_zf_bin_path"`
+	TaskZfLibPath      string   `codec:"task_zf_lib_path"`
+	HostZfLibPath      string   `codec:"host_zf_lib_path"`
+	FingerprintPeriod  string   `codec:"fingerprint_period"`
 }
 
 var (
@@ -98,8 +100,10 @@ var (
 		{"host_device_path", "string", false, `"/dev"`, "Path to find device files on the Host"},
 		{"task_onload_lib_path", "string", false, `"/usr/lib/x86_64-linux-gnu"`, "Path to place Onload libraries in the Nomad Task"},
 		{"host_onload_lib_path", "string", false, `"/usr/lib/x86_64-linux-gnu"`, "Path to find Onload libraries on the Host"},
-		{"task_onload_bin_path", "string", false, `"/usr/bin/"`, "Path to place Onload binaries in the Nomad Task"},
+		{"task_onload_bin_path", "string", false, `"/usr/bin"`, "Path to place Onload binaries in the Nomad Task"},
 		{"host_onload_bin_path", "string", false, `"/usr/bin"`, "Path to find Onload binaries on the Host"},
+		{"task_profile_dir_path", "string", false, `"/usr/libexec/onload/profiles"`, "Path to place Onload profiles directory in the Nomad Task"},
+		{"host_profile_dir_path", "string", false, `"/usr/libexec/onload/profiles"`, "Path to find Onload profiles directory on the Host"},
 		{"task_zf_bin_path", "string", false, `"/usr/bin"`, "Path to place TCPDirect/ZF binaries in the Nomad Task"},
 		{"host_zf_bin_path", "string", false, `"/usr/bin"`, "Path to find TCPDirect/ZF binaries on the Host"},
 		{"task_zf_lib_path", "string", false, `"/usr/lib/x86_64-linux-gnu"`, "Path to place TCPDirect/ZF libraries in the Nomad Task"},
