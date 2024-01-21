@@ -102,9 +102,8 @@ If `mount_onload` is enables mounting of all the files and paths configured belo
 
 | Name | Type | Default | Description |
 |:-----|:----:|:-------:|:------------|
-| `need_nic` | `bool` | `true` | Should the Device Plugin fail if no compatible nics are found. *NOT IMPLEMENTED* |
-| `set_preload` | `bool` | `true` | Should the device plugin set the LD_PRELOAD environment variable in the Task |
-| `mount_onload` | `bool` | `true` | Should the device plugin mount Onload files into the Nomad Task |
+| `set_preload` | `bool` | `true` | Should the Device Plugin set the `LD_PRELOAD` environment variable in the Nomad Task? |
+| `mount_onload` | `bool` | `true` | Should the Device Plugin mount Onload files into the Nomad Task? |
 | `ignored_interfaces` | `list(string)` | `[]` | List of interfaces to ignore.  Include `none` to prevent that pseudo-devices creation |
 | `task_device_path` | `string` | `"/dev"` | Path to place device files in the Nomad Task |
 | `host_device_path` | `string` | `"/dev"` | Path to find device files on the Host |
@@ -171,7 +170,6 @@ Here we are with this same capability for [HashiCorp Nomad](https://www.nomadpro
 
  * [ ] `PCIBusID`
  * [ ] `HealthDesc`
- * [ ] `need_nic`
  * [ ] Device Statistics
  * [ ] Device Attributes
  * [ ] Redis example

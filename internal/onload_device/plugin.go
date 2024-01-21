@@ -62,7 +62,6 @@ type configDesc struct {
 
 // Config contains configuration information for the plugin.
 type OnloadDevicePluginConfig struct {
-	NeedNic            bool     `codec:"need_nic"`
 	SetPreload         bool     `codec:"set_preload"`
 	MountOnload        bool     `codec:"mount_onload"`
 	IgnoredInterfaces  []string `codec:"ignored_interfaces"`
@@ -92,9 +91,8 @@ var (
 
 	// configDescriptions is converted into configSpec, the specification of the schema for this plugin's config.
 	configDescriptions = []configDesc{
-		{"need_nic", "bool", false, `true`, "Should the Device Plugin fail if no compatible nics are found"},
-		{"set_preload", "bool", false, `true`, "Should the device plugin set the LD_PRELOAD environment variable in the Task"},
-		{"mount_onload", "bool", false, `false`, "Should the device plugin mount Onload files into the Nomad Task"},
+		{"set_preload", "bool", false, `true`, "Should the Device Plugin set the LD_PRELOAD environment variable in the Nomad Task?"},
+		{"mount_onload", "bool", false, `true`, "Should the Device Plugin mount Onload files into the Nomad Task?"},
 		{"ignored_interfaces", "list(string)", false, `[]`, "List of interfaces to ignore.  Include `none` to prevent that pseudo-devices creation"},
 		{"task_device_path", "string", false, `"/dev"`, "Path to place device files in the Nomad Task"},
 		{"host_device_path", "string", false, `"/dev"`, "Path to find device files on the Host"},
