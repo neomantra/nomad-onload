@@ -38,6 +38,11 @@ var onloadBinaryFiles = []string{
 	"onload_stackdump",
 }
 
+// onloadDependFiles are the dependencies of the onload command, copied directly from host to target
+var onloadDependFiles = []string{
+	"/sbin/lsmod",
+}
+
 // onloadPreloadFile is the library file used by LD_PRELOAD
 const onloadPreloadFile = "libonload.so"
 
@@ -147,6 +152,13 @@ func (d *OnloadDevicePlugin) Reserve(deviceIDs []string) (*device.ContainerReser
 				resp.Mounts = append(resp.Mounts, &device.Mount{
 					TaskPath: path.Join(d.config.TaskOnloadBinPath, binName),
 					HostPath: path.Join(d.config.HostOnloadBinPath, binName),
+					ReadOnly: true,
+				})
+			}
+			for _, depName := range onloadDependFiles {
+				resp.Mounts = append(resp.Mounts, &device.Mount{
+					TaskPath: depName,
+					HostPath: depName,
 					ReadOnly: true,
 				})
 			}
