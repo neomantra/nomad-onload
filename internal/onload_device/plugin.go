@@ -33,16 +33,18 @@ const (
 	// SFC devices were created by Solaflare, which was acquired by Xilinx,
 	// which was acquired by AMD.  We will assign "amd" to "sfc" devices.
 	vendor_SFC = "amd"
-	// XDP driver discovery?
+	// XDP driver discovery
 	vendor_XDP = "xdp"
+	// No vendor, but not blank
+	vendor_None = "none"
 
 	// deviceType is the "type" of device being returned
 	deviceType_Onload   = "onload"
 	deviceType_ZF       = "zf"
 	deviceType_OnloadZF = "onloadzf"
 
-	groupName_notAvailable = "NA"
-	deviceName_none        = "none"
+	groupName_NotAvailable = "NA"
+	deviceName_None        = "none"
 
 	// attribute names
 	attr_OnloadVersion = "onload_version"
@@ -64,6 +66,7 @@ type configDesc struct {
 type OnloadDevicePluginConfig struct {
 	SetPreload         bool     `codec:"set_preload"`
 	MountOnload        bool     `codec:"mount_onload"`
+	NumPsuedoDevices   int      `codec:"num_psuedo"`
 	IgnoredInterfaces  []string `codec:"ignored_interfaces"`
 	TaskDevicePath     string   `codec:"task_device_path"`
 	HostDevicePath     string   `codec:"host_device_path"`
@@ -90,9 +93,11 @@ var (
 	}
 
 	// configDescriptions is converted into configSpec, the specification of the schema for this plugin's config.
+	// Config Defaults are stored here
 	configDescriptions = []configDesc{
 		{"set_preload", "bool", false, `true`, "Should the Device Plugin set the LD_PRELOAD environment variable in the Nomad Task?"},
 		{"mount_onload", "bool", false, `true`, "Should the Device Plugin mount Onload files into the Nomad Task?"},
+		{"num_psuedo", "number", false, `10`, "Number of psuedo-devices per Interface, limiting the number of simultaneous Onloaded Jobs"},
 		{"ignored_interfaces", "list(string)", false, `[]`, "List of interfaces to ignore.  Include `none` to prevent that pseudo-devices creation"},
 		{"task_device_path", "string", false, `"/dev"`, "Path to place device files in the Nomad Task"},
 		{"host_device_path", "string", false, `"/dev"`, "Path to find device files on the Host"},
@@ -189,6 +194,11 @@ func (d *OnloadDevicePlugin) SetConfig(c *base.Config) error {
 
 	// save the configuration to the plugin
 	d.config = config
+
+	// Fixup NumPsuedoDevices
+	if d.config.NumPsuedoDevices < 0 {
+		d.config.NumPsuedoDevices = 0
+	}
 
 	// convert the fingerprint poll period from an HCL string into a time.Duration
 	period, err := time.ParseDuration(config.FingerprintPeriod)

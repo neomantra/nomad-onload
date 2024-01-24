@@ -1,7 +1,11 @@
 Changelog
 =========
 
-## v0.2.0 (2024-01-20)
+## v0.3.0 (2024-01-24)
+
+ * Add `num_pseudo` to control the number of `onload` psuedo-devices are created.
+
+## v0.2.0 (2024-01-21)
 
  * Add PCIBusID probing
  * Remove `need_nic` config

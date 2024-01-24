@@ -30,11 +30,12 @@ type FingerprintDeviceData struct {
 	Interface  string // also its Name
 	DeviceType string
 	Vendor     string
+	Model      string
 	PCIBusID   string
 }
 
 func (d *FingerprintDeviceData) GroupNameKey() string {
-	return fmt.Sprintf("%s/%s/%s", d.Vendor, d.DeviceType, d.Interface)
+	return fmt.Sprintf("%s/%s/%s", d.Vendor, d.DeviceType, d.Model)
 }
 
 // FingerprintData represets attributes of driver/devices
@@ -66,7 +67,11 @@ func (d *OnloadDevicePlugin) getFingerprintData() (*FingerprintData, error) {
 		// Onload can be used without it, so we publish
 		// a fake device called "none" to still allow Onload enablement
 		// via the "<device_type>" name configuration
-		nics = append(nics, NICInfo{deviceName_none, ""})
+		nics = append(nics, NICInfo{
+			Interface: deviceName_None,
+			Vendor:    vendor_None,
+			PCIBusID:  "",
+		})
 	}
 
 	// list of eligble device types
@@ -82,12 +87,17 @@ func (d *OnloadDevicePlugin) getFingerprintData() (*FingerprintData, error) {
 	devices := make([]*FingerprintDeviceData, 0, len(deviceTypes)*len(nics))
 	for _, nic := range nics {
 		for _, deviceType := range deviceTypes {
-			devices = append(devices, &FingerprintDeviceData{
-				Interface:  nic.Interface,
-				DeviceType: deviceType,
-				Vendor:     vendor_SFC,
-				PCIBusID:   nic.PCIBusID,
-			})
+			// create pseudo-devices for non-exclusive access
+			for i := 0; i < d.config.NumPsuedoDevices; i++ {
+				deviceID := fmt.Sprintf("%s-%d", nic.Interface, i)
+				devices = append(devices, &FingerprintDeviceData{
+					Interface:  deviceID,
+					Model:      nic.Interface, // hard to know actual Model, so allow Interface as specifier
+					DeviceType: deviceType,
+					Vendor:     nic.Vendor,
+					PCIBusID:   nic.PCIBusID,
+				})
+			}
 		}
 	}
 
@@ -152,7 +162,7 @@ func (d *OnloadDevicePlugin) writeFingerprintToChannel(devices chan<- *device.Fi
 	for _, device := range fingerprintData.Devices {
 		key := device.GroupNameKey()
 		if key == "" {
-			key = groupName_notAvailable
+			key = groupName_NotAvailable
 		}
 		deviceListByGroupNameKey[key] = append(deviceListByGroupNameKey[key], device)
 	}

@@ -5,6 +5,7 @@ package onload_device
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -71,13 +72,23 @@ func ProbeZFVersion(binPath string) (string, error) {
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: (c) Copyright 2023 Advanced Micro Devices, Inc.
 
+// While the Nomad DeviceGroup has a Model concept, that is hard to extract.
+// We use the Interface name instead.
 type NICInfo struct {
 	Interface string
+	Vendor    string
 	PCIBusID  string
 }
 
-// Returns a list of the Solarflare interfaces present on the node
+// Returns a list of the Onload-enabled interfaces present on the node
 func ProbeOnloadNics() ([]NICInfo, error) {
+	onloadNics, onloadErr := ProbeOnloadSFCNics()
+	xdpNics, xdpErr := ProbeOnloadSFCNics()
+	return append(onloadNics, xdpNics...), errors.Join(onloadErr, xdpErr)
+}
+
+// Returns a list of the Solarflare (SFC) interfaces present on the node
+func ProbeOnloadSFCNics() ([]NICInfo, error) {
 	// Takes the output from lshw and returns the device name for each Solarflare device.
 
 	// "lshw -businfo -class network" sample output:
@@ -111,7 +122,11 @@ func ProbeOnloadNics() ([]NICInfo, error) {
 		m := r.FindStringSubmatch(line)
 		if len(m) == 3 {
 			iface, busid := m[2], m[1]
-			nics = append(nics, NICInfo{iface, busid})
+			nics = append(nics, NICInfo{
+				Interface: iface,
+				Vendor:    vendor_SFC,
+				PCIBusID:  busid,
+			})
 		}
 	}
 
@@ -119,4 +134,10 @@ func ProbeOnloadNics() ([]NICInfo, error) {
 		return nil, err
 	}
 	return nics, nil
+}
+
+// Returns a list of the Onload-XDP interfaces present on the node
+func ProbeOnloadXDPNics() ([]NICInfo, error) {
+	// TODO: probe it... use vendor_XDP
+	return nil, nil
 }

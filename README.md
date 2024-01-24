@@ -1,5 +1,7 @@
 # nomad-onload
 
+** This is still experimental! **
+
 `nomad-onload` is tooling to integrate [Nomad](https://www.nomadproject.io) and [OpenOnload](https://github.com/Xilinx-CNS/onload).
 
 It provides a [Nomad Device Plugin](https://developer.hashicorp.com/nomad/docs/concepts/plugins/devices) that exposes OpenOnload capabilites to Nomad via virtual devices.  This enables kernel-bypass of the networking stack of any Docker-driver Nomad Job.  In addition to TCP and UDP acceleration, facilities like `epoll` and pipes are brought to userspace as well.
@@ -68,18 +70,18 @@ task {
 
 ----
 
-Here are how Onload devices are made fingerprinted:
+Here is how Onload devices are fingerprinted:
 
  * If Onload/TCPDirect is not installed, there are no devices available.
  * Each "SFC interface" (Solarflare/Xilinx/AMD Network Card) is discovered with Vendor `amd`
  * If there are no SFC interfaces found, we create a fake one called `none`
 
 So if we have both Onload and TCPDirect installed along with two SFC interfces `eth0` and `eth1`, we'd have the following devices available to a Nomad Client:
-  * `amd/eth0/onload` `amd/eth0/zf` `amd/eth0/onloadzf`
-  * `amd/eth1/onload` `amd/eth1/zf` `amd/eth1/onloadzf`
+  * `amd/onload/eth0` `amd/zf/eth0` `amd/onloadzf/eth0`
+  * `amd/onload/eth1` `amd/zf/eth1` `amd/onloadzf/eth1`
 
 Or similarly, with Onload and TCPDirect installed, but without SFC interfaces:
- * `amd/none/onload` `amd/none/zf` `amd/none/onloadzf`
+ * `amd/onload/none` `amd/zf/none` `amd/onloadzf/none`
 
 
 Nomad allows devices to be selected per this [device name](https://developer.hashicorp.com/nomad/docs/job-specification/device#name):
@@ -104,6 +106,7 @@ If `mount_onload` is enables mounting of all the files and paths configured belo
 |:-----|:----:|:-------:|:------------|
 | `set_preload` | `bool` | `true` | Should the Device Plugin set the `LD_PRELOAD` environment variable in the Nomad Task? |
 | `mount_onload` | `bool` | `true` | Should the Device Plugin mount Onload files into the Nomad Task? |
+| `num_psuedo` | `number` | `false` | `10` | Number of psuedo-devices per Interface, limiting the number of simultaneous Onloaded Jobs |
 | `ignored_interfaces` | `list(string)` | `[]` | List of interfaces to ignore.  Include `none` to prevent that pseudo-devices creation |
 | `task_device_path` | `string` | `"/dev"` | Path to place device files in the Nomad Task |
 | `host_device_path` | `string` | `"/dev"` | Path to find device files on the Host |
