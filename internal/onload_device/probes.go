@@ -142,8 +142,9 @@ func ProbePPS() ([]DeviceInfo, error) {
 	}
 	var devs []DeviceInfo
 	for _, ppsDevice := range ppsDevices {
+		iface := strings.TrimPrefix(ppsDevice, "/dev/")
 		devs = append(devs, DeviceInfo{
-			Interface: ppsDevice,
+			Interface: iface,
 			Vendor:    vendor_None, // TODO: this is discoverable?
 			PCIBusID:  "",          // TODO: this is discoverable?
 		})
@@ -159,8 +160,9 @@ func ProbePTP() ([]DeviceInfo, error) {
 	}
 	var devs []DeviceInfo
 	for _, ptpDevice := range ptpDevices {
+		iface := strings.TrimPrefix(ptpDevice, "/dev/")
 		devs = append(devs, DeviceInfo{
-			Interface: ptpDevice,
+			Interface: iface,
 			Vendor:    vendor_None, // TODO: this is discoverable?
 			PCIBusID:  "",          // TODO: this is discoverable?
 		})

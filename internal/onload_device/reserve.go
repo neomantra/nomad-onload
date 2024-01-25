@@ -104,27 +104,24 @@ func (d *OnloadDevicePlugin) Reserve(deviceIDs []string) (*device.ContainerReser
 		Mounts:  []*device.Mount{},
 		Devices: []*device.DeviceSpec{},
 	}
-
 	// Add devices
 	for _, deviceID := range deviceIDs {
 		device, ok := d.devices[deviceID]
 		if !ok {
-			d.logger.Warn("Device not known", "deviceID", deviceID)
+			d.logger.Warn("Reserving a device not known", "deviceID", deviceID)
 			continue
 		}
+
 		switch device.DeviceType {
-		case deviceType_Onload:
-		case deviceType_ZF:
-		case deviceType_OnloadZF:
+		case deviceType_Onload, deviceType_ZF, deviceType_OnloadZF:
 			// updates resp
 			d.logger.Info("Reserving onload device", "deviceID", deviceID, "deviceType", device.DeviceType)
 			d.reserveOnloadDevice(resp, device.DeviceType, deviceID)
-		case deviceType_PTP:
-		case deviceType_PPS:
+		case deviceType_PTP, deviceType_PPS:
 			d.logger.Info("Reserving timekeeping device", "deviceID", deviceID, "deviceType", device.DeviceType)
-			d.reserveTimekeepingDevice(resp, device.DeviceType, device.Interface)
+			d.reserveTimekeepingDevice(resp, device.DeviceType, device.Model)
 		default:
-			d.logger.Warn("DeviceType not known", "deviceType", device.DeviceType, "deviceID", deviceID)
+			d.logger.Warn("Reserving a DeviceType not known", "deviceType", device.DeviceType, "deviceID", deviceID)
 			continue
 		}
 

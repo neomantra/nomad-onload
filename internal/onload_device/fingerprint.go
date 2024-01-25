@@ -99,6 +99,7 @@ func (d *OnloadDevicePlugin) getFingerprintData() (*FingerprintData, error) {
 	for _, dev := range deviceInfos {
 		for _, deviceType := range deviceTypes {
 			// create pseudo-devices for non-exclusive access
+			d.logger.Info("Fingerprinted NIC device", "deviceType", deviceType, "iface", dev.Interface)
 			devices = append(devices, makePsuedoDeviceFingerprints(d.config.NumPsuedoNIC, deviceType, dev)...)
 		}
 	}
@@ -107,6 +108,7 @@ func (d *OnloadDevicePlugin) getFingerprintData() (*FingerprintData, error) {
 	if d.config.ProbePPS {
 		if devs, err := ProbePPS(); err == nil {
 			for _, dev := range devs {
+				d.logger.Info("Fingerprinted PPS device", "deviceType", deviceType_PPS, "iface", dev.Interface)
 				devices = append(devices, makePsuedoDeviceFingerprints(d.config.NumPsuedoPPS, deviceType_PPS, dev)...)
 			}
 		} else {
@@ -116,6 +118,7 @@ func (d *OnloadDevicePlugin) getFingerprintData() (*FingerprintData, error) {
 	if d.config.ProbePTP {
 		if devs, err := ProbePTP(); err == nil {
 			for _, dev := range devs {
+				d.logger.Info("Fingerprinted PTP device", "deviceType", deviceType_PTP, "iface", dev.Interface)
 				devices = append(devices, makePsuedoDeviceFingerprints(d.config.NumPsuedoPTP, deviceType_PTP, dev)...)
 			}
 		} else {
@@ -138,7 +141,7 @@ func makePsuedoDeviceFingerprints(numPsuedoDevices int, deviceType string, devIn
 		deviceID := fmt.Sprintf("%s-%d", devInfo.Interface, i)
 		fingprintDevices = append(fingprintDevices, &FingerprintDeviceData{
 			Interface:  deviceID,
-			Model:      devInfo.Interface, // hard to know actual Model, so allow Interface as specifier
+			Model:      devInfo.Interface, // hard to know actual Model, so use Interface as specifier
 			DeviceType: deviceType,
 			Vendor:     devInfo.Vendor,
 			PCIBusID:   devInfo.PCIBusID,
@@ -277,11 +280,10 @@ func (d *OnloadDevicePlugin) deviceGroupFromFingerprintData(groupName string, de
 
 	dev := deviceList[0] // safe, we checked above
 	deviceGroup := &device.DeviceGroup{
-		Vendor:  dev.Vendor,
-		Type:    dev.DeviceType,
-		Name:    groupName,
-		Devices: devices,
-		// TODO: what are common attributes?
+		Vendor:     dev.Vendor,
+		Type:       dev.DeviceType,
+		Name:       groupName,
+		Devices:    devices,
 		Attributes: map[string]*structs.Attribute{},
 	}
 
