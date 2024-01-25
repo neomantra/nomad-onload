@@ -5,7 +5,6 @@ package onload_device
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -74,21 +73,14 @@ func ProbeZFVersion(binPath string) (string, error) {
 
 // While the Nomad DeviceGroup has a Model concept, that is hard to extract.
 // We use the Interface name instead.
-type NICInfo struct {
+type DeviceInfo struct {
 	Interface string
 	Vendor    string
 	PCIBusID  string
 }
 
-// Returns a list of the Onload-enabled interfaces present on the node
-func ProbeOnloadNics() ([]NICInfo, error) {
-	onloadNics, onloadErr := ProbeOnloadSFCNics()
-	xdpNics, xdpErr := ProbeOnloadSFCNics()
-	return append(onloadNics, xdpNics...), errors.Join(onloadErr, xdpErr)
-}
-
 // Returns a list of the Solarflare (SFC) interfaces present on the node
-func ProbeOnloadSFCNics() ([]NICInfo, error) {
+func ProbeOnloadSFCNics() ([]DeviceInfo, error) {
 	// Takes the output from lshw and returns the device name for each Solarflare device.
 
 	// "lshw -businfo -class network" sample output:
@@ -114,7 +106,7 @@ func ProbeOnloadSFCNics() ([]NICInfo, error) {
 		return nil, err
 	}
 
-	var nics []NICInfo
+	var nics []DeviceInfo
 	scanner := bufio.NewScanner(strings.NewReader(string(cmdOutput)))
 
 	for scanner.Scan() {
@@ -122,7 +114,7 @@ func ProbeOnloadSFCNics() ([]NICInfo, error) {
 		m := r.FindStringSubmatch(line)
 		if len(m) == 3 {
 			iface, busid := m[2], m[1]
-			nics = append(nics, NICInfo{
+			nics = append(nics, DeviceInfo{
 				Interface: iface,
 				Vendor:    vendor_SFC,
 				PCIBusID:  busid,
@@ -137,7 +129,41 @@ func ProbeOnloadSFCNics() ([]NICInfo, error) {
 }
 
 // Returns a list of the Onload-XDP interfaces present on the node
-func ProbeOnloadXDPNics() ([]NICInfo, error) {
+func ProbeOnloadXDPNics() ([]DeviceInfo, error) {
 	// TODO: probe it... use vendor_XDP
 	return nil, nil
+}
+
+// Returns a list of the PPS interfaces present on the node
+func ProbePPS() ([]DeviceInfo, error) {
+	ppsDevices, err := filepath.Glob("/dev/pps*")
+	if err != nil {
+		return nil, err
+	}
+	var devs []DeviceInfo
+	for _, ppsDevice := range ppsDevices {
+		devs = append(devs, DeviceInfo{
+			Interface: ppsDevice,
+			Vendor:    vendor_None, // TODO: this is discoverable?
+			PCIBusID:  "",          // TODO: this is discoverable?
+		})
+	}
+	return devs, nil
+}
+
+// Returns a list of the PTP interfaces present on the node
+func ProbePTP() ([]DeviceInfo, error) {
+	ptpDevices, err := filepath.Glob("/dev/ptp*")
+	if err != nil {
+		return nil, err
+	}
+	var devs []DeviceInfo
+	for _, ptpDevice := range ptpDevices {
+		devs = append(devs, DeviceInfo{
+			Interface: ptpDevice,
+			Vendor:    vendor_None, // TODO: this is discoverable?
+			PCIBusID:  "",          // TODO: this is discoverable?
+		})
+	}
+	return devs, nil
 }

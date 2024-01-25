@@ -10,7 +10,7 @@ tasks:
 
   clean:
     cmds:
-      - rm -f ./bin/nomad-onload-device ./bin/onload-probe ./bin/launcher
+      - rm -f ./bin/nomad-onload-device ./bin/nomad-onload-probe ./bin/launcher
 
   tidy:
     cmds:
@@ -23,6 +23,10 @@ tasks:
       - go build -o ./bin/launcher github.com/hashicorp/nomad/plugins/shared/cmd/launcher
     generates:
       - ./bin/launcher
+
+  update-deps:
+    cmds:
+      - go get -u ./...
 
   build:
     deps:
@@ -73,9 +77,9 @@ tasks:
     deps:
       - tidy
     cmds:
-      - go build -o ./bin/onload-probe cmd/onload-probe/*.go
+      - go build -o ./bin/nomad-onload-probe cmd/onload-probe/*.go
     generates:
-      - ./bin/onload-probe
+      - ./bin/nomad-onload-probe
     sources:
       - cmd/onload-probe/*.go
       - internal/**/*.go

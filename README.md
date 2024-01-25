@@ -12,6 +12,7 @@ Running high-performance kernel-bypass workloads is a vast topic. This [High Per
 
  * [Installation](#installation)
  * [Onload Devices](#onload-devices)
+ * [Timekeeping Devices](#timekeeping-devices)
  * [Plugin Configuration](#plugin-configuration)
  * [Tips](#tips)
  * [Building](#building)
@@ -83,7 +84,6 @@ So if we have both Onload and TCPDirect installed along with two SFC interfces `
 Or similarly, with Onload and TCPDirect installed, but without SFC interfaces:
  * `amd/onload/none` `amd/zf/none` `amd/onloadzf/none`
 
-
 Nomad allows devices to be selected per this [device name](https://developer.hashicorp.com/nomad/docs/job-specification/device#name):
 
  * `<device_type>`
@@ -92,6 +92,12 @@ Nomad allows devices to be selected per this [device name](https://developer.has
 
 Thus, by simply specifying the Device Type name `onload`, we get the Onload capability.  However, the full information can be used in `name`, as well as the attributes used in `contraint` and `affinity`.
 
+## Timekeeping Devices
+
+If configured with `probe_pps` or `probe_ptp`, this plugin will also detect devices under `/dev/pps*` and `/dev/ptp*`.  The will be made available as `pps` and `ptp` device types.
+
+ * `<vendor>/pps/<interface>`
+ * `<vendor>/ptp/<interface>`
 
 ## Plugin Configuration
 
@@ -106,8 +112,14 @@ If `mount_onload` is enables mounting of all the files and paths configured belo
 |:-----|:----:|:-------:|:------------|
 | `set_preload` | `bool` | `true` | Should the Device Plugin set the `LD_PRELOAD` environment variable in the Nomad Task? |
 | `mount_onload` | `bool` | `true` | Should the Device Plugin mount Onload files into the Nomad Task? |
-| `num_psuedo` | `number` | `false` | `10` | Number of psuedo-devices per Interface, limiting the number of simultaneous Onloaded Jobs |
+| `probe_nic` | `bool` |  | `true` | Should the Device Plugin probe for Onload-enabled NICs? |
+| `probe_xdp` | `bool` |  | `true` | Should the Device Plugin probe for Onload-enabled XDP? **NOT IMPLEMENTED** |
+| `probe_pps` | `bool` |  | `true` | Should the Device Plugin probe for PPS devices? |
+| `probe_ptp` | `bool` |  | `true` | Should the Device Plugin probe for PTP devices? |
 | `ignored_interfaces` | `list(string)` | `[]` | List of interfaces to ignore.  Include `none` to prevent that pseudo-devices creation |
+| `num_nic` | `number` | `false` | `10` | Number of psuedo-devices per NIC device, limiting the number of simultaneous Onloaded Jobs |
+| `num_pps` | `number` | `false` | `10` | Number of psuedo-devices per PPS device, limiting the number of simultaneous PPS device claims |
+| `num_ptp` | `number` | `false` | `10` | Number of psuedo-devices per PTP device, limiting the number of simultaneous PTP device claims |
 | `task_device_path` | `string` | `"/dev"` | Path to place device files in the Nomad Task |
 | `host_device_path` | `string` | `"/dev"` | Path to find device files on the Host |
 | `task_onload_lib_path` | `string` | `"/opt/onload/usr/lib64"` | Path to place Onload libraries in the Nomad Task |
@@ -123,6 +135,24 @@ If `mount_onload` is enables mounting of all the files and paths configured belo
 | `fingerprint_period` | `string` | `"1m"` | Period of time between attemps to fingerpint devices |
 
 ## Tips
+
+The binary distribution includes `nomad-onload-probe`, which scans a system using the same code as `nomad-onload-device`:
+
+```
+$ ./bin/nomad-onload-probe 
+Onload version: 8.1.2.26
+TCPDirect version: 8.1.2
+Onload hardware-accelerated interfaces:
+  eth0     0000:b1:00.0
+  eth1     0000:b1:00.1
+XDP hardware-accelerated interfaces: (FAKE, ROADMAP)
+PPS devices:
+  /dev/pps0 
+PTP devices:
+  /dev/ptp0 
+  /dev/ptp1 
+  /dev/ptp2
+```
 
 You can run `onload_stackdump` inside the container, but you must remove `LD_PRELOAD` first:
 
@@ -140,8 +170,8 @@ ci_netif_dump_to_logger: stack=6 name=
 
 Building is performed with [Taskfile](https://taskfile.dev/), creating the following binaries:
 
- * `onload-probe` (simple test tool)
- * `nomad-onload-device-plugin` (the plugin)
+ * `nomad-onload-probe` (simple test tool)
+ * `nomad-onload-device` (the plugin)
 
 ```
 $ task
@@ -149,8 +179,8 @@ task: [tidy] go mod tidy
 task: [tidy] go mod tidy
 task: [tidy] go mod tidy
 task: [install-deps] go build -o ./bin/launcher github.com/hashicorp/nomad/plugins/shared/cmd/launcher
-task: [build-onload-probe] go build -o ./bin/onload-probe cmd/onload-probe/*.go
-task: [build-plugin] go build -o ./bin/nomad-device-plugin-onload cmd/nomad-device-onload/*.go
+task: [build-onload-probe] go build -o ./bin/nomad-onload-probe cmd/onload-probe/*.go
+task: [build-plugin] go build -o ./bin/nomad-onload-device cmd/nomad-device-onload/*.go
 ```
 
 We publish with [GitHub Actions](https://github.com/neomantra/nomad-onload/actions) and [Goreleaser](https://goreleaser.com).

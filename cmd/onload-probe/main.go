@@ -41,11 +41,38 @@ func main() {
 	}
 
 	fmt.Fprintf(os.Stdout, "Onload hardware-accelerated interfaces:\n")
-	nics, err := device.ProbeOnloadNics()
+	sfcNics, err := device.ProbeOnloadSFCNics()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to query interfaces: %s\n", err.Error())
+		fmt.Fprintf(os.Stderr, "Failed to query SFC interfaces: %s\n", err.Error())
 	} else {
-		for _, nic := range nics {
+		for _, nic := range sfcNics {
+			fmt.Fprintf(os.Stdout, "  %-8s %s\n", nic.Interface, nic.PCIBusID)
+		}
+	}
+
+	fmt.Fprintf(os.Stdout, "XDP hardware-accelerated interfaces: (FAKE, ROADMAP)\n")
+	if xdpNics, err := device.ProbeOnloadXDPNics(); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to query XDP interfaces: %s\n", err.Error())
+	} else {
+		for _, nic := range xdpNics {
+			fmt.Fprintf(os.Stdout, "  %-8s %s\n", nic.Interface, nic.PCIBusID)
+		}
+	}
+
+	fmt.Fprintf(os.Stdout, "PPS devices:\n")
+	if ppsDevs, err := device.ProbePPS(); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to query PPS devices: %s\n", err.Error())
+	} else {
+		for _, nic := range ppsDevs {
+			fmt.Fprintf(os.Stdout, "  %-8s %s\n", nic.Interface, nic.PCIBusID)
+		}
+	}
+
+	fmt.Fprintf(os.Stdout, "PTP devices:\n")
+	if ppsDevs, err := device.ProbePTP(); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to query PTP devices: %s\n", err.Error())
+	} else {
+		for _, nic := range ppsDevs {
 			fmt.Fprintf(os.Stdout, "  %-8s %s\n", nic.Interface, nic.PCIBusID)
 		}
 	}

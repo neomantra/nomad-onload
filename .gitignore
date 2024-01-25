@@ -42,7 +42,7 @@ exit-code
 *.iml
 
 nomad-onload-device
-onload-probe
+nomad-onload-probe
 launcher
 TODO.md
 

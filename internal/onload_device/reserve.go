@@ -98,10 +98,6 @@ func (d *OnloadDevicePlugin) Reserve(deviceIDs []string) (*device.ContainerReser
 		return nil, &reservationError{notExistingIDs}
 	}
 
-	// Extract deviceType from the first device (all devices the same per Device Group)
-	// This is to check for ZF later.
-	deviceType := d.devices[deviceIDs[0]].DeviceType
-
 	// Initialize the response
 	resp := &device.ContainerReservation{
 		Envs:    map[string]string{},
@@ -109,6 +105,36 @@ func (d *OnloadDevicePlugin) Reserve(deviceIDs []string) (*device.ContainerReser
 		Devices: []*device.DeviceSpec{},
 	}
 
+	// Add devices
+	for _, deviceID := range deviceIDs {
+		device, ok := d.devices[deviceID]
+		if !ok {
+			d.logger.Warn("Device not known", "deviceID", deviceID)
+			continue
+		}
+		switch device.DeviceType {
+		case deviceType_Onload:
+		case deviceType_ZF:
+		case deviceType_OnloadZF:
+			// updates resp
+			d.logger.Info("Reserving onload device", "deviceID", deviceID, "deviceType", device.DeviceType)
+			d.reserveOnloadDevice(resp, device.DeviceType, deviceID)
+		case deviceType_PTP:
+		case deviceType_PPS:
+			d.logger.Info("Reserving timekeeping device", "deviceID", deviceID, "deviceType", device.DeviceType)
+			d.reserveTimekeepingDevice(resp, device.DeviceType, device.Interface)
+		default:
+			d.logger.Warn("DeviceType not known", "deviceType", device.DeviceType, "deviceID", deviceID)
+			continue
+		}
+
+	}
+	return resp, nil
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+func (d *OnloadDevicePlugin) reserveOnloadDevice(resp *device.ContainerReservation, deviceType string, deviceID string) {
 	// Always mount the Devices
 	if d.config.TaskDevicePath != "" && d.config.HostDevicePath != "" {
 		deviceFiles := onloadDeviceFiles
@@ -187,9 +213,14 @@ func (d *OnloadDevicePlugin) Reserve(deviceIDs []string) (*device.ContainerReser
 	if d.config.SetPreload && deviceType != deviceType_ZF && d.config.TaskOnloadLibPath != "" {
 		resp.Envs["LD_PRELOAD"] = path.Join(d.config.TaskOnloadLibPath, onloadPreloadFile)
 	}
+}
 
-	for _, deviceID := range deviceIDs {
-		d.logger.Info("Reserving onload device", "deviceID", deviceID, "mount_onload", d.config.MountOnload)
-	}
-	return resp, nil
+///////////////////////////////////////////////////////////////////////////////
+
+func (d *OnloadDevicePlugin) reserveTimekeepingDevice(resp *device.ContainerReservation, deviceType string, deviceInterface string) {
+	resp.Devices = append(resp.Devices, &device.DeviceSpec{
+		TaskPath:    path.Join(d.config.TaskDevicePath, deviceInterface),
+		HostPath:    path.Join(d.config.HostDevicePath, deviceInterface),
+		CgroupPerms: "mrw",
+	})
 }

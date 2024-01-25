@@ -58,23 +58,34 @@ func (d *OnloadDevicePlugin) getFingerprintData() (*FingerprintData, error) {
 		d.logger.Info("TCPDirect not found", "err", err.Error())
 	}
 
-	nics, err := ProbeOnloadNics()
-	if err != nil {
-		d.logger.Info("Issue probing Onload NICs", "err", err.Error())
+	var deviceInfos []DeviceInfo
+	if d.config.ProbeSFC {
+		devs, err := ProbeOnloadSFCNics()
+		if err != nil {
+			d.logger.Info("Issue probing SFC NICs", "err", err.Error())
+		}
+		deviceInfos = append(deviceInfos, devs...)
 	}
-	if len(nics) == 0 {
-		// if we did not discover any SFC NIC,s that's OK.
+	if d.config.ProbeXDP {
+		devs, err := ProbeOnloadXDPNics()
+		if err != nil {
+			d.logger.Info("Issue probing XDP NICs", "err", err.Error())
+		}
+		deviceInfos = append(deviceInfos, devs...)
+	}
+	if len(deviceInfos) == 0 {
+		// if we did not discover any SFC or XDP NIC,s that's OK.
 		// Onload can be used without it, so we publish
 		// a fake device called "none" to still allow Onload enablement
 		// via the "<device_type>" name configuration
-		nics = append(nics, NICInfo{
+		deviceInfos = append(deviceInfos, DeviceInfo{
 			Interface: deviceName_None,
 			Vendor:    vendor_None,
 			PCIBusID:  "",
 		})
 	}
 
-	// list of eligble device types
+	// list of eligble Onload/ZF device types
 	var deviceTypes []string
 	if ooVersion != "" {
 		deviceTypes = append(deviceTypes, deviceType_Onload)
@@ -84,28 +95,56 @@ func (d *OnloadDevicePlugin) getFingerprintData() (*FingerprintData, error) {
 	}
 
 	// create the fingerprint device list
-	devices := make([]*FingerprintDeviceData, 0, len(deviceTypes)*len(nics))
-	for _, nic := range nics {
+	devices := make([]*FingerprintDeviceData, 0, len(deviceTypes)*len(deviceInfos))
+	for _, dev := range deviceInfos {
 		for _, deviceType := range deviceTypes {
 			// create pseudo-devices for non-exclusive access
-			for i := 0; i < d.config.NumPsuedoDevices; i++ {
-				deviceID := fmt.Sprintf("%s-%d", nic.Interface, i)
-				devices = append(devices, &FingerprintDeviceData{
-					Interface:  deviceID,
-					Model:      nic.Interface, // hard to know actual Model, so allow Interface as specifier
-					DeviceType: deviceType,
-					Vendor:     nic.Vendor,
-					PCIBusID:   nic.PCIBusID,
-				})
-			}
+			devices = append(devices, makePsuedoDeviceFingerprints(d.config.NumPsuedoNIC, deviceType, dev)...)
 		}
 	}
 
+	// Now lets handle Timekeeping
+	if d.config.ProbePPS {
+		if devs, err := ProbePPS(); err == nil {
+			for _, dev := range devs {
+				devices = append(devices, makePsuedoDeviceFingerprints(d.config.NumPsuedoPPS, deviceType_PPS, dev)...)
+			}
+		} else {
+			d.logger.Info("Issue probing PPS devices", "err", err.Error())
+		}
+	}
+	if d.config.ProbePTP {
+		if devs, err := ProbePTP(); err == nil {
+			for _, dev := range devs {
+				devices = append(devices, makePsuedoDeviceFingerprints(d.config.NumPsuedoPTP, deviceType_PTP, dev)...)
+			}
+		} else {
+			d.logger.Info("Issue probing PTP devices", "err", err.Error())
+		}
+	}
+
+	// Return the Fingerprint data
 	return &FingerprintData{
 		OOVersion: ooVersion,
 		ZFVersion: zfVersion,
 		Devices:   devices,
 	}, nil
+}
+
+// Creates pseudo-device fingerprints for non-exclusive access to a device. DeviceID = "<interface>-<pdev-num>", like "eth0-0"
+func makePsuedoDeviceFingerprints(numPsuedoDevices int, deviceType string, devInfo DeviceInfo) []*FingerprintDeviceData {
+	var fingprintDevices []*FingerprintDeviceData
+	for i := 0; i < numPsuedoDevices; i++ {
+		deviceID := fmt.Sprintf("%s-%d", devInfo.Interface, i)
+		fingprintDevices = append(fingprintDevices, &FingerprintDeviceData{
+			Interface:  deviceID,
+			Model:      devInfo.Interface, // hard to know actual Model, so allow Interface as specifier
+			DeviceType: deviceType,
+			Vendor:     devInfo.Vendor,
+			PCIBusID:   devInfo.PCIBusID,
+		})
+	}
+	return fingprintDevices
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -42,6 +42,8 @@ const (
 	deviceType_Onload   = "onload"
 	deviceType_ZF       = "zf"
 	deviceType_OnloadZF = "onloadzf"
+	deviceType_PTP      = "ptp"
+	deviceType_PPS      = "pps"
 
 	groupName_NotAvailable = "NA"
 	deviceName_None        = "none"
@@ -65,8 +67,14 @@ type configDesc struct {
 // Config contains configuration information for the plugin.
 type OnloadDevicePluginConfig struct {
 	SetPreload         bool     `codec:"set_preload"`
+	ProbeSFC           bool     `codec:"probe_nic"`
+	ProbeXDP           bool     `codec:"probe_xdp"`
+	ProbePTP           bool     `codec:"probe_ptp"`
+	ProbePPS           bool     `codec:"probe_pps"`
 	MountOnload        bool     `codec:"mount_onload"`
-	NumPsuedoDevices   int      `codec:"num_psuedo"`
+	NumPsuedoNIC       int      `codec:"num_nic"`
+	NumPsuedoPPS       int      `codec:"num_pps"`
+	NumPsuedoPTP       int      `codec:"num_ptp"`
 	IgnoredInterfaces  []string `codec:"ignored_interfaces"`
 	TaskDevicePath     string   `codec:"task_device_path"`
 	HostDevicePath     string   `codec:"host_device_path"`
@@ -96,8 +104,13 @@ var (
 	// Config Defaults are stored here
 	configDescriptions = []configDesc{
 		{"set_preload", "bool", false, `true`, "Should the Device Plugin set the LD_PRELOAD environment variable in the Nomad Task?"},
+		{"probe_nic", "bool", false, `true`, "Should the Device Plugin probe for Onload-enabled NICs?"},
+		{"probe_pps", "bool", false, `true`, "Should the Device Plugin probe for PPS devices?"},
+		{"probe_ptp", "bool", false, `true`, "Should the Device Plugin probe for PTP devices?"},
 		{"mount_onload", "bool", false, `true`, "Should the Device Plugin mount Onload files into the Nomad Task?"},
-		{"num_psuedo", "number", false, `10`, "Number of psuedo-devices per Interface, limiting the number of simultaneous Onloaded Jobs"},
+		{"num_nic", "number", false, `10`, "Number of psuedo-devices per NIC device, limiting the number of simultaneous Onloaded Jobs"},
+		{"num_pps", "number", false, `10`, "Number of psuedo-devices per PPS device, limiting the number of simultaneous PPS device claims"},
+		{"num_ptp", "number", false, `10`, "Number of psuedo-devices per PTP device, limiting the number of simultaneous PTP device claims"},
 		{"ignored_interfaces", "list(string)", false, `[]`, "List of interfaces to ignore.  Include `none` to prevent that pseudo-devices creation"},
 		{"task_device_path", "string", false, `"/dev"`, "Path to place device files in the Nomad Task"},
 		{"host_device_path", "string", false, `"/dev"`, "Path to find device files on the Host"},
@@ -196,8 +209,14 @@ func (d *OnloadDevicePlugin) SetConfig(c *base.Config) error {
 	d.config = config
 
 	// Fixup NumPsuedoDevices
-	if d.config.NumPsuedoDevices < 0 {
-		d.config.NumPsuedoDevices = 0
+	if d.config.NumPsuedoNIC < 0 {
+		d.config.NumPsuedoNIC = 0
+	}
+	if d.config.NumPsuedoPPS < 0 {
+		d.config.NumPsuedoPPS = 0
+	}
+	if d.config.NumPsuedoPTP < 0 {
+		d.config.NumPsuedoPTP = 0
 	}
 
 	// convert the fingerprint poll period from an HCL string into a time.Duration
