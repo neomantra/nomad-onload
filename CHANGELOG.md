@@ -1,10 +1,10 @@
 Changelog
 =========
 
-## v0.4.0 (2024-01-25)
+## v0.4.1 (2024-01-25)
 
  * Added `ptp` and `pps` device types. I'm more of a bottom, but I do like disciplining clocks.
- * Added `sfptpd` example at `examples/terraform/sfptpd`](./examples/terraform/sfptpd/main.tf)
+ * Added `sfptpd` example at [`examples/terraform/sfptpd`](./examples/terraform/sfptpd/main.tf)
 
 ## v0.3.0 (2024-01-24)
 

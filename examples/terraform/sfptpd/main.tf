@@ -12,12 +12,19 @@
 
 # Yes, it should be variables, but this is a demo.
 locals {
-    # target this to your own infrastructure
-    nomad_address    = "http://localhost:4646"
-    nomad_datacenter = "*"
-    nomad_node       = "node1"
-    nic_interface    = "eth0"
-    sfptpd_image     = "onload/sfptpd:3.7.1.1007"
+  # target this to your own infrastructure
+  nomad_address    = "http://localhost:4646"
+  nomad_datacenter = "*"
+  nomad_node       = "node1"
+  nic_interface    = "eth0"
+  sfptpd_image     = "onload/sfptpd:3.7.1.1007"
+
+  # use either privileged mode to get all devices and caps
+  # is_privileged = "true"
+  # device_type   = ""
+  # or picka "pps" or "ptp" device
+  is_privileged = "false"
+  device_type   = "ptp"
 }
 
 terraform {
@@ -31,7 +38,7 @@ terraform {
 }
 
 provider "nomad" {
-    address = local.nomad_address
+  address = local.nomad_address
 }
 
 resource "nomad_variable" "sfptpd" {
@@ -48,6 +55,7 @@ resource "nomad_job" "sfptpd" {
     NOMAD_NODE_CONSTRAINT = local.nomad_node,
     NIC_INTERFACE         = local.nic_interface,
     SFPTPD_IMAGE          = local.sfptpd_image
-    ONLOAD_ENABLED        = "false"
+    IS_PRIVILEGED         = local.is_privileged
+    DEVICE_TYPE           = local.device_type
   })
 }

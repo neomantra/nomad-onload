@@ -38,7 +38,7 @@ job "sfptpd" {
 
         # Sorry, the nomad-onload plugin can't do *everything* for you!
         network_mode = "host"
-        privileged = true
+        privileged = "${IS_PRIVILEGED}"
         cap_add = [
           "net_bind_service",
           "net_admin",
@@ -47,10 +47,9 @@ job "sfptpd" {
         ]
       }
       resources {
-        device "ptp" {}
-        %{~ if lower("${ONLOAD_ENABLED}") == "true" ~}
-        device "onload" {}
-        %{~ endif ~} 
+        %{ if "${DEVICE_TYPE}" != "" }
+        device "${DEVICE_TYPE}" {}
+        %{ endif } 
       }
 
       template {
