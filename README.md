@@ -136,6 +136,10 @@ If `mount_onload` is enables mounting of all the files and paths configured belo
 
 ## Tips
 
+See the examples directory:
+
+ * [`sfptpd` Nomad System Job with Terraform](./examples/terraform/sfptpd/README.md)
+
 The binary distribution includes `nomad-onload-probe`, which scans a system using the same code as `nomad-onload-device`:
 
 ```

@@ -4,7 +4,8 @@ Changelog
 ## v0.4.0 (2024-01-25)
 
  * Added `ptp` and `pps` device types. I'm more of a bottom, but I do like disciplining clocks.
- 
+ * Added `sfptpd` example at `examples/terraform/sfptpd`](./examples/terraform/sfptpd/main.tf)
+
 ## v0.3.0 (2024-01-24)
 
  * Add `num_pseudo` to control the number of `onload` psuedo-devices are created.
