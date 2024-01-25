@@ -18,8 +18,18 @@ builds:
       - linux
     goarch:
       - amd64
+  - main: ./cmd/onload-probe
+    id: nomad-onload-probe
+    binary: nomad-onload-probe
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+
 archives:
-  - id: nomad-device-onload
+  - id: nomad-onload
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 checksum:
