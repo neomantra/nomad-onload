@@ -282,7 +282,7 @@ func (d *OnloadDevicePlugin) deviceGroupFromFingerprintData(groupName string, de
 	deviceGroup := &device.DeviceGroup{
 		Vendor:     dev.Vendor,
 		Type:       dev.DeviceType,
-		Name:       groupName,
+		Name:       dev.Model,
 		Devices:    devices,
 		Attributes: map[string]*structs.Attribute{},
 	}

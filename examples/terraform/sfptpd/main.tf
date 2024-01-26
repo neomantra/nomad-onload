@@ -24,7 +24,7 @@ locals {
   # device_type   = ""
   # or picka "pps" or "ptp" device
   is_privileged = "false"
-  device_type   = "ptp"
+  device_type   = "none/ptp/ptp0"
 }
 
 terraform {

@@ -96,8 +96,8 @@ Thus, by simply specifying the Device Type name `onload`, we get the Onload capa
 
 If configured with `probe_pps` or `probe_ptp`, this plugin will also detect devices under `/dev/pps*` and `/dev/ptp*`.  The will be made available as `pps` and `ptp` device types.
 
- * `<vendor>/pps/<interface>`
- * `<vendor>/ptp/<interface>`
+ * `none/pps/<interface>` : for example `/none/pps/pps0` 
+ * `none/ptp/<interface>` : for example `/none/ptp/ptp1` 
 
 ## Plugin Configuration
 
@@ -209,6 +209,7 @@ Here we are with this same capability for [HashiCorp Nomad](https://www.nomadpro
  * [ ] Device Statistics
  * [ ] Redis example
  * [ ] XDP example
+ * [ ] Expose Nomad-selected interfaces via environment variables, e.g. how does `device "ptp" {}` become `/dev/ptp1` inside the config?
 
 ## Credits and License
 
