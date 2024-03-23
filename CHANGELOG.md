@@ -1,6 +1,11 @@
 Changelog
 =========
 
+## v0.5.0 (2024-03-23)
+
+ * Homogenize binary names to `nomad-device-onload` and `nomad-probe-onload`
+   for consistency with other Nomad Device plugins.
+
 ## v0.4.1 (2024-01-25)
 
  * Added `ptp` and `pps` device types. I'm more of a bottom, but I do like disciplining clocks.

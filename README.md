@@ -27,13 +27,13 @@ Running high-performance kernel-bypass workloads is a vast topic. This [High Per
 Binaries for multiple platforms are [released on GitHub](https://github.com/neomantra/nomad-onload/releases).
 
 To install the Nomad Onload Device Plugin on your Nomad Client instance,
-copy the `nomad-onload-device` binary to the host's [Nomad `plugin_dir`](https://developer.hashicorp.com/nomad/docs/configuration#plugin_dir) (e.g. `/opt/nomad/data/plugins`).
+copy the `nomad-device-onload` binary to the host's [Nomad `plugin_dir`](https://developer.hashicorp.com/nomad/docs/configuration#plugin_dir) (e.g. `/opt/nomad/data/plugins`).
 
 Then add a [`plugin` config stanza](https://developer.hashicorp.com/nomad/docs/configuration/plugin) to your Nomad configuration:
 
 ```hcl
 # onload.hcl
-plugin "nomad-onload-device" {
+plugin "nomad-device-onload" {
   config {
     # Mount Onload into images
     mount_onload = true
@@ -140,10 +140,10 @@ See the examples directory:
 
  * [`sfptpd` Nomad System Job with Terraform](./examples/terraform/sfptpd/README.md)
 
-The binary distribution includes `nomad-onload-probe`, which scans a system using the same code as `nomad-onload-device`:
+The binary distribution includes `nomad-probe-onload`, which scans a system using the same code as `nomad-device-onload`:
 
 ```
-$ ./bin/nomad-onload-probe 
+$ ./bin/nomad-probe-onload
 Onload version: 8.1.2.26
 TCPDirect version: 8.1.2
 Onload hardware-accelerated interfaces:
@@ -174,8 +174,8 @@ ci_netif_dump_to_logger: stack=6 name=
 
 Building is performed with [Taskfile](https://taskfile.dev/), creating the following binaries:
 
- * `nomad-onload-probe` (simple test tool)
- * `nomad-onload-device` (the plugin)
+ * `nomad-probe-onload` (simple test tool)
+ * `nomad-device-onload` (the plugin)
 
 ```
 $ task
@@ -183,8 +183,8 @@ task: [tidy] go mod tidy
 task: [tidy] go mod tidy
 task: [tidy] go mod tidy
 task: [install-deps] go build -o ./bin/launcher github.com/hashicorp/nomad/plugins/shared/cmd/launcher
-task: [build-onload-probe] go build -o ./bin/nomad-onload-probe cmd/onload-probe/*.go
-task: [build-plugin] go build -o ./bin/nomad-onload-device cmd/nomad-device-onload/*.go
+task: [build-onload-probe] go build -o ./bin/nomad-probe-onload cmd/onload-probe/*.go
+task: [build-plugin] go build -o ./bin/nomad-device-onload cmd/nomad-device-onload/*.go
 ```
 
 We publish with [GitHub Actions](https://github.com/neomantra/nomad-onload/actions) and [Goreleaser](https://goreleaser.com).

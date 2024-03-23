@@ -41,8 +41,8 @@ exit-code
 *.swp
 *.iml
 
-nomad-onload-device
-nomad-onload-probe
+nomad-device-onload
+nomad-probe-onload
 launcher
 TODO.md
 
